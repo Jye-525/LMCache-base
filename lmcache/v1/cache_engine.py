@@ -657,7 +657,10 @@ class LMCacheEngine:
             # Allocate the memory object
             num_tokens = end - start
             kv_shape_single_layer = self.gpu_connector.get_shape(num_tokens)
-
+            logger.info(
+                f"Store layer: per layer kv shape: {kv_shape_single_layer}, "
+                f"layers={self.num_layers}, num_tokens={num_tokens}"
+            )
             memory_objs_multi_layer = self.storage_manager.batched_allocate(
                 kv_shape_single_layer,
                 kv_dtype,
@@ -748,6 +751,10 @@ class LMCacheEngine:
                 yield
 
         self.stats_monitor.on_store_finished(monitor_req_id, tot_token_num)
+        logger.info(
+            f"Stored total {tot_token_num} tokens, "
+            f"num_to_store_tokens={num_to_store_tokens}"
+        )
         yield
 
     @_lmcache_nvtx_annotate

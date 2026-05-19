@@ -57,6 +57,8 @@ class LocalCPUBackend(AllocatorBackendInterface):
             super().__init__("cpu")
 
         self.cache_policy = get_cache_policy(config.cache_policy)
+        # The hot cache will be the in-memory map from CacheEngineKey to
+        # MemoryObj representing hot chunks
         self.hot_cache = self.cache_policy.init_mutable_mapping()
 
         self.use_hot = config.local_cpu
@@ -64,6 +66,8 @@ class LocalCPUBackend(AllocatorBackendInterface):
         # test compatibility
         # TODO: fix the tests to get rid the memory allocator
         assert metadata is not None or memory_allocator is not None
+        # Construct the memory allocator, which is the actual source of memory
+        # hot_cache is just a set of references to allocate memory objects
         self.memory_allocator = (
             self.initialize_allocator(config, metadata)  # type: ignore
             if memory_allocator is None
@@ -71,6 +75,7 @@ class LocalCPUBackend(AllocatorBackendInterface):
         )
         self.lmcache_worker = lmcache_worker
         self.instance_id = config.lmcache_instance_id
+        # cpu_lock: a global lock for protecting hot_cache and its metadata
         self.cpu_lock = threading.Lock()
 
         self.stats_monitor = LMCStatsMonitor.GetOrCreate()
@@ -162,6 +167,7 @@ class LocalCPUBackend(AllocatorBackendInterface):
             self.cache_policy.update_on_put(key)
 
             # Push kv admit msg with batching
+            # Notify controller about the new chunk
             if self.batched_msg_sender is not None:
                 self.batched_msg_sender.add_kv_op(
                     op_type=OpType.ADMIT,

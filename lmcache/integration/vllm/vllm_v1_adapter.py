@@ -951,7 +951,12 @@ class LMCacheConnectorV1Impl:
             layer_name: the name of that layer
         """
         if self.layerwise_retrievers:
-            logger.debug(f"Waiting for layer {self.current_layer} to be loaded")
+            logger.info(f"Waiting for layer {self.current_layer} to be loaded")
+        else:
+            logger.info(
+                f"Waiting for layer loading, {self.layerwise_retrievers} "
+                "is empty, do nothing..."
+            )
 
         # Wait for the layer to be loaded
         for layerwise_retriever in self.layerwise_retrievers:
@@ -986,6 +991,10 @@ class LMCacheConnectorV1Impl:
             **kwargs: additional arguments for the save operation.
         """
         assert self.lmcache_engine is not None
+        logger.info(
+            f"Saving KV with layerwise={self.use_layerwise} "
+            f"for layer {self.current_layer}: {layer_name}"
+        )
 
         if not self.use_layerwise:
             return
@@ -1145,8 +1154,8 @@ class LMCacheConnectorV1Impl:
             store_mask = torch.ones(len(token_ids), dtype=torch.bool)
             store_mask[:skip_leading_tokens] = False
 
-            logger.debug(
-                "Storing KV cache for %d out of %d tokens "
+            logger.info(
+                "+++Storing KV cache for %d out of %d tokens "
                 "(skip_leading_tokens=%d) for request %s",
                 len(token_ids) - skip_leading_tokens,
                 len(token_ids),
